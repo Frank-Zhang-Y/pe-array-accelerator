@@ -83,16 +83,175 @@ out = relu(acc + bias)
 
 ---
 
-### 3.5 Why Hardware Acceleration
+### 3.5 Why Hardware Acceleration (Detailed)
 
-These operations are ideal for hardware because:
-
-* Dominated by multiply-accumulate (MAC)
-* Highly parallelizable
-* Regular data patterns
-* Repeated computations
+The target operations (dot product, FC, GEMM, Conv) are highly suitable for hardware acceleration due to their **regular structure, high parallelism, and streaming-friendly dataflow**.
 
 ---
+
+### 1. Parallelism (PE Array)
+
+The core computation:
+
+```text
+y = x0*w0 + x1*w1 + ... + xN*wN
+```
+
+can be parallelized.
+
+* Software (CPU):
+
+  ```text
+  for i in range(N):
+      acc += x[i] * w[i]   # sequential
+  ```
+
+* Hardware (PE array):
+
+  ```text
+  p0 = x0*w0
+  p1 = x1*w1
+  p2 = x2*w2
+  p3 = x3*w3
+  ...
+  sum = p0 + p1 + p2 + p3
+  ```
+
+👉 Multiple multiplications happen **in the same cycle**, significantly improving throughput.
+
+---
+
+### 2. Pipelining (Key Speedup Mechanism)
+
+The computation is divided into pipeline stages:
+
+```text
+Stage 1: load data (x, w)
+Stage 2: multiplication (x * w)
+Stage 3: partial sum (adder tree or MAC)
+Stage 4: post-processing (bias + ReLU)
+```
+
+Once pipelined:
+
+```text
+Cycle 1: Stage1 (data load)
+Cycle 2: Stage1 + Stage2
+Cycle 3: Stage1 + Stage2 + Stage3
+Cycle 4: Stage1 + Stage2 + Stage3 + Stage4
+Cycle 5+: one result per cycle
+```
+
+👉 After pipeline fill, the system achieves:
+
+```text
+Throughput ≈ 1 output per cycle
+```
+
+Even though latency is multiple cycles, **throughput is maximized**.
+
+---
+
+### 3. Streaming Dataflow
+
+The design uses AXI-Stream and FIFO-based buffering:
+
+```text
+Input Stream → FIFO → PE Array → Output Stream
+```
+
+Key advantages:
+
+* No need to store full matrices in memory
+* Continuous data processing (no idle cycles)
+* Natural support for large workloads
+
+👉 Data is processed **as it arrives**, enabling high utilization.
+
+---
+
+### 4. Data Reuse (Critical Optimization)
+
+In neural network workloads:
+
+* The same weights are reused across multiple inputs
+* The same input data may be reused across multiple outputs
+
+With local buffers:
+
+```text
+Weight Buffer → reused across many MAC operations
+```
+
+👉 Reduces external memory access (which is the real bottleneck)
+
+---
+
+### 5. Reduced Memory Bandwidth Pressure
+
+CPU/GPU style:
+
+```text
+load x → compute → store → reload → compute ...
+```
+
+Hardware accelerator:
+
+```text
+load once → reuse many times inside PE array
+```
+
+👉 Significantly reduces bandwidth requirements and improves efficiency.
+
+---
+
+### 6. MAC-Dominated Workload
+
+Neural network computation is dominated by:
+
+```text
+acc += a * b
+```
+
+Hardware can implement this directly as:
+
+* Dedicated multipliers (DSP blocks)
+* Deep pipelines
+* Parallel PE arrays
+
+👉 Achieves much higher efficiency than general-purpose processors.
+
+---
+
+### 7. Dataflow-Driven Execution
+
+Unlike CPUs (instruction-driven), this design is:
+
+```text
+data-driven (streaming)
+```
+
+* Computation starts when data arrives
+* No instruction fetch/decode overhead
+* High hardware utilization
+
+---
+
+### Summary
+
+Hardware acceleration improves performance through:
+
+* Parallel computation (PE array)
+* Deep pipelining (high throughput)
+* Streaming dataflow (continuous processing)
+* Data reuse (reduced memory traffic)
+
+These together enable:
+
+```text
+High throughput + Low latency + High energy efficiency
+```
+
 
 ## 4. IP Architecture
 
