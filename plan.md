@@ -67,7 +67,7 @@ for i in range(M):
     acc += b[i]
     acc = max(0, acc)
     y[i] = clip_and_scale(acc)
-
+```
 ## Why This Is Suitable for Hardware Acceleration
 
 - High arithmetic intensity: many multiply-accumulate operations
