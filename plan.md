@@ -24,7 +24,9 @@ In addition, the post-processing stage is slightly extended to better reflect a 
 
 The IP computes:
 
-y_i = max(0, sum_{j=0}^{N-1} W[i][j] * x[j] + b[i])
+$$
+y_i = \max\left(0, \sum_{j=0}^{N-1} W[i][j] \cdot x[j] + b[i]\right)
+$$
 
 with an additional optional scaling/clipping step for fixed-point output.
 
