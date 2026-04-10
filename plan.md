@@ -56,8 +56,10 @@ For each output element:
 4. Apply ReLU activation  
 5. Apply scaling and clipping  
 
+
 Equivalent pseudocode:
 
+```python
 for i in range(M):
     acc = 0
     for j in range(N):
